@@ -1,0 +1,3 @@
+[submodule "common-packer"]
+	path = common-packer
+	url = https://github.com/lfit/releng-common-packer.git

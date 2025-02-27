@@ -1,0 +1,6 @@
+{
+  "aws_access_key": "ACCESSKEY",
+  "aws_security_key": "SECURITYKEY",
+  "security_group_id": "sg-abcxyz",
+  "subnet_id": "subnet-abcxyz"
+}

@@ -1,0 +1,42 @@
+# Ignore Mac temp files
+.DS_Store
+
+# Ignore Vim temporary files
+.*.sw?
+
+# Ignore changes to the JJB Configuration File
+jenkins.ini
+
+# We don't want .netrc files since they're credential files
+.netrc
+
+# Maven
+target/
+
+# Vagrant
+.vagrant
+
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.project
+/.pydevproject
+
+# Python
+.tox/
+__pycache__/
+*.pyc
+.venv
+
+# npm-groovy-lint
+node_modules/
+package-lock.json
+package.json
+
+# Packer
+.galaxy
+**/cloud_env.json
+
+# [EOF]
