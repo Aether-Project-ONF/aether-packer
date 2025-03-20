@@ -8,9 +8,9 @@
   roles:
     - role: geerlingguy.docker
       docker_packages:
-        - "docker-{{ docker_edition }}"
-        - "docker-{{ docker_edition }}-cli"
-        - "docker-{{ docker_edition }}-rootless-extras"
+        - "docker-{{ docker_edition }}=5:26.1.4-1~ubuntu.22.04~jammy"
+        - "docker-{{ docker_edition }}-cli=5:26.1.4-1~ubuntu.22.04~jammy"
+        - "docker-{{ docker_edition }}-rootless-extras=5:26.1.4-1~ubuntu.22.04~jammy"
         - "containerd.io"
         - docker-buildx-plugin
 

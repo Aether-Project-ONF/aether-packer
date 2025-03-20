@@ -5,6 +5,8 @@
 - name: "Provision Packages for Jenkins image"
   hosts: default
   become: true
+  vars:
+    venv_path: /home/ubuntu/ubuntu_venv
 
   tasks:
     - name: Add Java Amazon Corretto Jdk repo GPG key
@@ -39,6 +41,7 @@
           - "socat"
           - "ssh"
           - "sshpass"
+          - "vim"
           - "zip"
           # below four packages are required by npm
           - "nodejs"
@@ -54,7 +57,6 @@
     - name: Install modern Ubuntu packages
       apt:
         name:
-          - "ansible"
           - "enchant-2"
           - "libnode-dev"
       when: ansible_distribution_version > '18.04'
@@ -100,8 +102,8 @@
 
     - name: Download helm archive
       get_url:
-        url: "https://get.helm.sh/helm-v3.5.2-linux-amd64.tar.gz"
-        checksum: "sha256:01b317c506f8b6ad60b11b1dc3f093276bb703281cb1ae01132752253ec706a2"
+        url: "https://get.helm.sh/helm-v3.17.1-linux-amd64.tar.gz"
+        checksum: "sha256:3b66f3cd28409f29832b1b35b43d9922959a32d795003149707fea84cbcd4469"
         dest: "/tmp/helm.tgz"
 
     - name: Unarchive helm
@@ -119,84 +121,51 @@
 
     - name: Download/install kubectl binary
       get_url:
-        url: "https://storage.googleapis.com/kubernetes-release/release/v1.18.15/bin/linux/amd64/kubectl"
-        checksum: "sha256:eb5a5dd0a72795942ab81d1e4331625e80a90002c8bb39b2cb15aa707a3812c6"
+        url: "https://dl.k8s.io/release/v1.32.2/bin/linux/amd64/kubectl"
+        checksum: "sha256:4f6a959dcc5b702135f8354cc7109b542a2933c46b808b248a214c1f69f817ea"
         dest: /usr/local/bin/kubectl
         mode: "0755"
 
-    - name: load /etc/docker/daemon.json from file
-      slurp:
-        src: /etc/docker/daemon.json
-      register: imported_var
+    - name: Add default user to docker group
+      ansible.builtin.user:
+        name: ubuntu
+        groups: docker
+        append: true
 
-    - name: append more key/values
-      set_fact:
-        imported_var: "{{ imported_var.content|b64decode|from_json | default([]) | combine({ 'registry-mirrors': ['https://mirror.registry.opennetworking.org'] }) }}"
+    - name: Install multi python3 packages with version specifiers
+      ansible.builtin.pip:
+        virtualenv: "{{ venv_path }}"
+        name:
+          - ansible==8.5.0
+          - ansible-lint
+          - docker
+          - httpie
+          - netaddr
+          - pylint
+          - requests
+          - tox
+          - twine
+          - virtualenv
+          - yamllint
+      timeout: 600
+      register: pipout
+      become_user: ubuntu
 
-    - name: write var to file
-      copy:
-        content: "{{ imported_var | to_nice_json }}"
-        dest: /etc/docker/daemon.json
+    - name: Print debug info from pip step
+      ansible.builtin.debug:
+        var: pipout
+      tags: always
 
-    - name: restart Docker service
-      systemd:
-        name: docker
-        state: restarted
-        daemon_reload: true
-
-    # Installing python packages in this way is not supported in the latest
-    # versions of python. These need to be installed in a venv, which is then
-    # utilized by jobs.
-    #
-    # - name: Install multi python3 packages with version specifiers
-    #   ansible.builtin.pip:
-    #     name:
-    #       - ansible
-    #       - ansible-lint
-    #       - docker
-    #       - docker-compose
-    #       - git-review
-    #       - httpie
-    #       - netaddr
-    #       - pylint
-    #       - tox
-    #       - twine
-    #       - virtualenv
-    #       - yamllint
-    #     executable: pip3
-        # break_system_packages: true
-
-    # - name: Install multi python2 packages with version specifiers
-    #   pip:
-    #     name:
-    #       - Jinja2
-    #       - coverage
-    #       - certifi
-    #       - cryptography
-    #       - git+https://github.com/linkchecker/linkchecker.git@v9.4.0
-    #       - graphviz
-    #       - isort
-    #       - more-itertools==5.0.0
-    #       - mock>2.0.0<2.1.0
-    #       - ndg-httpsclient
-    #       - nose2>0.9.0<0.10.0
-    #       - pyopenssl
-    #       - pexpect
-    #       - pyyaml>3.10.0<3.11.0
-    #       - requests>2.14.0<2.15.0
-    #       - robotframework
-    #       - robotframework-httplibrary
-    #       - robotframework-kafkalibrary
-    #       - robotframework-lint
-    #       - robotframework-requests
-    #       - robotframework-sshlibrary
-    #       - six
-    #       - urllib3
+    - name: Install required Ansible collections
+      become_user: ubuntu
+      ansible.builtin.command: >
+        {{ venv_path }}/bin/ansible-galaxy collection install --upgrade kubernetes.core
+        ansible.posix ansible.utils community.docker
 
     - name: Install multi ruby packages with version specifiers
       gem:
         name: mdl
-        version: 0.5.0
+        version: 0.13.0
 
     - name: Install gitbook-cli npm package with version specifiers
       npm:
@@ -206,7 +175,7 @@
     - name: Install markdownlint npm package with version specifiers
       npm:
         name: markdownlint
-        version: '0.18.0'
+        version: '0.37.4'
         global: true
 
     - name: Install typings npm package with version specifiers
@@ -268,25 +237,6 @@
         path: /usr/local/bin/hadolint
         mode: 0755
 
-    - name: Download github-release
-      get_url:
-        url: "https://github.com/github-release/github-release/releases/download/v0.10.0/linux-amd64-github-release.bz2"
-        checksum: "sha256:b360af98188c5988314d672bb604efd1e99daae3abfb64d04051ee17c77f84b6"
-        dest: /tmp/github-release.bz2
-
-    # Unarchive target doesn't support the bz2 format
-    - name: Unarchive github-release
-      shell:
-        cmd: |
-          bzip2 -d /tmp/github-release.bz2
-
-    - name: Install github-release binary
-      copy:
-        src: /tmp/github-release
-        dest: /usr/local/bin/github-release
-        mode: "0755"
-        remote_src: true
-
     - name: Recursively remove download files and folders
       file:
         path: "{{ item }}"
@@ -298,5 +248,3 @@
         - /tmp/protobuf.zip
         - /tmp/pandoc.deb
         - /tmp/repo.b64
-
-# [EOF]

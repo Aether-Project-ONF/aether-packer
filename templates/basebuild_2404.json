@@ -23,7 +23,6 @@
             "region": "us-west-2",
             "secret_key": "{{user `aws_security_key`}}",
             "security_group_id": "{{user `security_group_id`}}",
-            "associate_public_ip_address": true,
             "source_ami_filter": {
                 "filters": {
                     "name": "{{user `source_ami_filter_name`}}",
@@ -71,7 +70,7 @@
       {
           "type": "ansible",
           "user": "{{user `ssh_user`}}",
-          "playbook_file": "provision/local-docker.yaml",
+          "playbook_file": "provision/local-docker-24.04.yaml",
           "ansible_ssh_extra_args": ["'-oHostKeyAlgorithms=+ssh-rsa'", "' '", "'-oPubkeyAcceptedKeyTypes=+ssh-rsa'"],
           "ansible_env_vars": [
               "ANSIBLE_NOCOWS=1",
