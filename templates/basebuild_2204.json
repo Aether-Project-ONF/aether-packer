@@ -70,7 +70,7 @@
       {
           "type": "ansible",
           "user": "{{user `ssh_user`}}",
-          "playbook_file": "provision/local-docker.yaml",
+          "playbook_file": "provision/local-docker-22.04.yaml",
           "ansible_ssh_extra_args": ["'-oHostKeyAlgorithms=+ssh-rsa'", "' '", "'-oPubkeyAcceptedKeyTypes=+ssh-rsa'"],
           "ansible_env_vars": [
               "ANSIBLE_NOCOWS=1",
